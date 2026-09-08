@@ -32,9 +32,8 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  if (!await prisma.profile.count()) {
-    try {
-    const { profile, experience, skills, projects }: DataJson = JSON.parse(process.env.SEED_INITIAL_DATA_JSON || '');
+  if (!process.env.SEED_INITIAL_DATA_JSON || !await prisma.profile.count()) {
+    const { profile, experience, skills, projects }: DataJson = JSON.parse(process.env.SEED_INITIAL_DATA_JSON!);
 
     await prisma.profile.create({
         data: {
@@ -44,16 +43,12 @@ async function main() {
         projects: { create: projects }
         }
     });
-
-    console.log('Initial data filled')
-    } catch (e: unknown) {
-    console.error('Cant fill initial data: ', e)
-    }
   };
 }
 
 main()
   .then(async () => {
+    console.log('Initial data filled');
     await prisma.$disconnect();
     await pool.end();
   })
