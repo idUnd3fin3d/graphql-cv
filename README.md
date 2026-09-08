@@ -48,11 +48,24 @@ Backend-приложение в формате **цифровой визитки
 
 ```graphql
 query {
-  profile {
+  profiles {
+    id
     name
     description
-    links {
-      title
+    githubLink
+    hhLink
+    experience {
+      company
+      position
+      description
+      startDate
+      endDate
+    }
+    skills {
+      name
+    }
+    projects {
+      name
       url
     }
   }
@@ -69,8 +82,7 @@ API предоставляет список профессиональных н�
 
 ```graphql
 query {
-  skills {
-    id
+  skills (profileId: "<ID>") {
     name
   }
 }
@@ -83,15 +95,12 @@ query {
   "data": {
     "skills": [
       {
-        "id": "1",
         "name": "TypeScript"
       },
       {
-        "id": "2",
         "name": "Node.js"
       },
       {
-        "id": "3",
         "name": "NestJS"
       }
     ]
@@ -114,12 +123,12 @@ query {
 
 ```graphql
 query {
-  experiences {
+  experiences (profileId: "<ID>") {
     company
     position
+    description
     startDate
     endDate
-    achievements
   }
 }
 ```
@@ -137,7 +146,7 @@ query {
 
 ```graphql
 query {
-  projects {
+  projects (profileId: "<ID>") {
     name
     url
   }
@@ -160,40 +169,42 @@ query {
 │   └── seed.ts
 │
 ├── src/
-│   ├── profile/
-│   │   ├── profile.module.ts
-│   │   ├── profile.resolver.ts
-│   │   └── profile.service.ts
-│   │
-│   ├── skills/
-│   │   ├── skills.module.ts
-│   │   ├── skills.resolver.ts
-│   │   └── skills.service.ts
-│   │
-│   ├── experience/
-│   │   ├── experience.module.ts
-│   │   ├── experience.resolver.ts
-│   │   └── experience.service.ts
-│   │
-│   ├── projects/
-│   │   ├── projects.module.ts
-│   │   ├── projects.resolver.ts
-│   │   └── projects.service.ts
-│   │
-│   ├── prisma/
+│   ├── database/
 │   │   ├── prisma.module.ts
 │   │   └── prisma.service.ts
+│   │
+│   ├── generated/
+│   │
+│   ├── modules/
+│   │   ├── experiences/
+│   │   │   ├── experiences.model.ts
+│   │   │   ├── experiences.module.ts
+│   │   │   ├── experiences.resolver.ts
+│   │   │   └── experiences.service.ts
+│   │   │
+│   │   ├── profiles/
+│   │   │   ├── profiles.model.ts
+│   │   │   ├── profiles.module.ts
+│   │   │   ├── profiles.resolver.ts
+│   │   │   └── profiles.service.ts
+│   │   │
+│   │   ├── projects/
+│   │   │   ├── projects.model.ts
+│   │   │   ├── projects.module.ts
+│   │   │   ├── projects.resolver.ts
+│   │   │   └── projects.service.ts
+│   │   │
+│   │   └── skills/
+│   │       ├── skills.model.ts
+│   │       ├── skills.module.ts
+│   │       ├── skills.resolver.ts
+│   │       └── skills.service.ts
 │   │
 │   ├── app.module.ts
 │   └── main.ts
 │
-├── .env.example
-├── .gitignore
-├── Dockerfile
-├── docker-compose.yml
-├── package.json
-├── tsconfig.json
-└── README.md
+└── test/
+    └── app.e2e-spec.ts
 ```
 
 ---
@@ -224,20 +235,15 @@ prisma/seed.ts
 
 ## 🔄 Автоматическая подготовка базы данных
 
-При запуске приложения база данных автоматически:
+При запуске приложения через Docker база данных автоматически:
 
-1. запускается;
-2. подготавливается;
-3. получает необходимые миграции;
-4. заполняется начальными данными;
-5. становится доступной для приложения.
+* подготавливается с помощью Prisma migrations;
+* заполняется начальными данными через seed-скрипт;
+* данные для заполнения берутся из переменной окружения SEED_INITIAL_DATA_JSON.
 
-Seed содержит данные:
-
-* профиля;
-* профессиональных навыков;
-* опыта работы;
-* проектов.
+```bash
+SEED_INITIAL_DATA_JSON='{"profile":{...},"skills":[...],"experiences":[...],"projects":[...]}'
+```
 
 Повторный запуск seed не должен приводить к появлению дубликатов.
 
@@ -311,7 +317,7 @@ cd <project-directory>
 ## 2. Установка зависимостей
 
 ```bash
-npm install
+yarn install
 ```
 
 ## 3. Настройка переменных окружения
@@ -322,10 +328,11 @@ npm install
 touch .env
 ```
 
-Добавьте подключение к базе данных:
+Добавьте подключение к базе данных и seed данные:
 
 ```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/digital_card"
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/graphql-cv-db"
+SEED_INITIAL_DATA_JSON='{...}'
 ```
 
 ## 4. Prisma
@@ -345,7 +352,7 @@ npx prisma migrate deploy
 Заполнить базу данными:
 
 ```bash
-npm run seed
+npx prisma db seed
 ```
 
 ## 5. Запуск приложения
@@ -379,35 +386,30 @@ http://localhost:3000/graphql
 
 # 🔎 Пример комплексного запроса
 
-Можно получить всю информацию о специалисте одним GraphQL-запросом:
+Можно получить всю информацию по каждому резюме одним GraphQL-запросом:
 
 ```graphql
 query {
-  profile {
-    name
-    description
-    links {
-      title
-      url
-    }
-  }
-
-  skills {
+  profiles {
     id
     name
-  }
-
-  experiences {
-    company
-    position
-    startDate
-    endDate
-    achievements
-  }
-
-  projects {
-    name
-    url
+    description
+    githubLink
+    hhLink
+    experience {
+      company
+      position
+      description
+      startDate
+      endDate
+    }
+    skills {
+      name
+    }
+    projects {
+      name
+      url
+    }
   }
 }
 ```
@@ -415,95 +417,3 @@ query {
 Такой подход позволяет клиенту самостоятельно определить, какие данные ему необходимы, используя возможности GraphQL.
 
 ---
-
-# 🧪 Проверка API
-
-После запуска приложения откройте:
-
-```text
-http://localhost:3000/graphql
-```
-
-В Apollo Sandbox выполните:
-
-```graphql
-query {
-  profile {
-    name
-    description
-  }
-}
-```
-
-Если приложение настроено корректно, API вернёт данные профиля.
-
-Также можно проверить остальные разделы:
-
-```graphql
-query {
-  skills {
-    name
-  }
-
-  experiences {
-    company
-    position
-  }
-
-  projects {
-    name
-    url
-  }
-}
-```
-
----
-
-# 🧰 Prisma Studio
-
-Для просмотра содержимого базы данных можно использовать Prisma Studio:
-
-```bash
-npx prisma studio
-```
-
-После запуска Prisma Studio будет доступна в браузере.
-
----
-
-# 📦 Основные команды
-
-| Команда                     | Описание                         |
-| --------------------------- | -------------------------------- |
-| `npm install`               | Установка зависимостей           |
-| `npm run start:dev`         | Запуск в development mode        |
-| `npm run build`             | Сборка проекта                   |
-| `npm run start:prod`        | Запуск production версии         |
-| `npm run seed`              | Заполнение базы данных           |
-| `npx prisma generate`       | Генерация Prisma Client          |
-| `npx prisma migrate dev`    | Создание и применение миграции   |
-| `npx prisma migrate deploy` | Применение существующих миграций |
-| `npx prisma studio`         | Запуск Prisma Studio             |
-| `docker compose up --build` | Запуск проекта через Docker      |
-| `docker compose down`       | Остановка Docker-контейнеров     |
-
----
-
-# 📊 Требования тестового задания
-
-| Требование                   | Реализация              |
-| ---------------------------- | ----------------------- |
-| Git                          | ✅ Git repository        |
-| TypeScript                   | ✅ Основной язык проекта |
-| Node.js                      | ✅ Runtime               |
-| NestJS                       | ✅ Backend framework     |
-| Prisma                       | ✅ ORM                   |
-| GraphQL                      | ✅ API                   |
-| Apollo Sandbox               | ✅ GraphQL Playground    |
-| Docker                       | ✅ Контейнеризация       |
-| Профиль                      | ✅                       |
-| Навыки                       | ✅                       |
-| Опыт работы                  | ✅                       |
-| Проекты                      | ✅                       |
-| Автоматическая подготовка БД | ✅                       |
-| Автоматическое заполнение БД | ✅                       |
