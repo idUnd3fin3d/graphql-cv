@@ -11,12 +11,11 @@ COPY prisma ./prisma
 COPY prisma7.config.ts nest-cli.json tsconfig.json tsconfig.build.json declarations.d.ts ./
 COPY src ./src
 
-RUN yarn prisma generate
 RUN yarn build
 
 ENV NODE_ENV=production
 ENV PORT=3000
 
-EXPOSE 3000
+EXPOSE $PORT
 
 CMD ["sh", "-c", "npx prisma migrate deploy && npx prisma db seed && node dist/main.js"]

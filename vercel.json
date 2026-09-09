@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "buildCommand": "yarn run build",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api"
+    }
+  ]
+}
