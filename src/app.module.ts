@@ -13,6 +13,7 @@ import { ExperiencesModule } from './modules/experiences/experiences.module.js';
       driver: ApolloDriver,
       autoSchemaFile: true,
       graphiql: true,
+      introspection: true,
     }),
     PrismaModule,
     ProfilesModule,
