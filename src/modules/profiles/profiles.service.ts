@@ -19,7 +19,7 @@ export class ProfilesService {
   }
 
   findById(id: string) {
-    return this.prisma.profile.findFirst({
+    return this.prisma.profile.findUnique({
       where: { id },
       include: {
         experience: true,

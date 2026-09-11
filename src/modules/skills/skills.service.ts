@@ -7,7 +7,7 @@ export class SkillsService {
   constructor(private readonly prisma: PrismaService) {}
 
   findByProfileId(profileId: string) {
-    // return this.prisma.profile.findFirst({
+    // return this.prisma.profile.findUnique({
     //   where: { id: profileId },
     //   select: { skills: true }
     // }).then(result => result?.skills)
